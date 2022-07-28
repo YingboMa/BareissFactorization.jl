@@ -4,7 +4,21 @@ using LinearAlgebra, SparseArrays
 
 export left_looking_bareiss
 
-function left_looking_bareiss(A)
+function interchange_rows!(A, i, i′)
+    i == i′ && return nothing
+    for j in axes(A, 2)
+        A[i′, j], A[i, j] = A[i, j], A[i′, j]
+    end
+    return nothing
+end
+
+function find_pivot(x, k)
+    idx = findfirst(!iszero, view(x, k:length(x)))
+    idx === nothing && return nothing
+    idx + k - 1
+end
+
+function left_looking_bareiss(A; find_pivot = find_pivot)
     Base.require_one_based_indexing(A)
     m, n = size(A)
     P = Matrix(I(m))
@@ -20,17 +34,16 @@ function left_looking_bareiss(A)
         end
         x = T.(Ll \ (P * A[:, k]))
         U[1:k-1, k] = @view x[1:k-1]
-        i = findfirst(!iszero, view(x, k:m))
+        i = find_pivot(x, k)
         if i === nothing
             dc = dp
             if k <= m
                 L[k, k] = dp
             end
         else
-            i += k - 1
-            L[i, :], L[k, :] = L[k, :], L[i, :]
-            P[i, :], P[k, :] = P[k, :], P[i, :]
-            x[i], x[k] = x[k], x[i]
+            interchange_rows!(L, i, k)
+            interchange_rows!(P, i, k)
+            interchange_rows!(x, i, k)
             dc = L[k, k] = U[k, k] = x[k]
             L[k+1:m, k] = x[k+1:m]
         end
