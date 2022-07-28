@@ -1,0 +1,3 @@
+[deps]
+BareissFactorization = "a1baa227-6128-4bc4-bf85-d6a080d2f8dd"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
