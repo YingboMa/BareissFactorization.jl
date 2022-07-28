@@ -48,11 +48,7 @@ function interchange_rows!(A, i, i′)
     return nothing
 end
 
-function find_pivot(x, k)
-    idx = findfirst(!iszero, view(x, k:length(x)))
-    idx === nothing && return nothing
-    idx + k - 1
-end
+find_pivot(x) = findfirst(!iszero, x)
 
 function left_looking_bareiss(A; find_pivot = find_pivot)
     Base.require_one_based_indexing(A)
@@ -65,28 +61,29 @@ function left_looking_bareiss(A; find_pivot = find_pivot)
     ps = zeros(T, m)
     dp = 1
     for k in 1:n
-        Ll = Rational{T}[L[:, 1:k-1] * Diagonal(@view ds[1:k-1]) [zeros(k-1, m-k+1); I(m-k+1)]]
-        for j in k:m
-            Ll[j, j] = 1//dp
-        end
+        #Ll = Rational{T}[L[:, 1:k-1] * Diagonal(@view ds[1:k-1]) [zeros(k-1, m-k+1); I(m-k+1)]]
+        #for j in k:m
+        #    Ll[j, j] = 1//dp
+        #end
         Pb = P * A[:, k]
-        x = T.(Ll \ (Pb))
-        #xx = scaled_ldiv!(LowerTriangular(L[1:k-1, 1:k-1]), ps, Pb[1:k-1])
-        #@assert xx == x[1:k-1]
+        #x = T.(Ll \ (Pb))
+        x1 = scaled_ldiv!(LowerTriangular(L[1:k-1, 1:k-1]), ps, Pb[1:k-1])
+        x2 = Pb[k:m] * dp - Int.(L[k:m, 1:k-1] * Diagonal(@view ds[1:k-1]) * x1 * dp)
 
-        U[1:k-1, k] = @view x[1:k-1]
-        i = find_pivot(x, k)
+        U[1:k-1, k] = x1
+        i = find_pivot(x2)
         if i === nothing
             dc = dp
             if k <= m
                 L[k, k] = dp
             end
         else
-            interchange_rows!(L, i, k)
-            interchange_rows!(P, i, k)
-            interchange_rows!(x, i, k)
-            dc = L[k, k] = U[k, k] = x[k]
-            L[k+1:m, k] = x[k+1:m]
+            i′ = i + k - 1
+            interchange_rows!(L, i′, k)
+            interchange_rows!(P, i′, k)
+            interchange_rows!(x2, i, 1)
+            dc = L[k, k] = U[k, k] = x2[1]
+            L[k+1:m, k] = x2[2:m-k+1]
         end
         if k <= m
             ds[k] = 1//(dp * dc)
